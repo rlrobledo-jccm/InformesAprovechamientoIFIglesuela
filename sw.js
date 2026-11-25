@@ -1,6 +1,6 @@
 // Service worker: la app funciona sin conexión una vez abierta con cobertura.
 // Sube el número de versión cada vez que cambies archivos de la app.
-const VERSION = 'v2';
+const VERSION = 'v4';
 const APP = 'aprov-app-' + VERSION;
 const TILES = 'aprov-teselas';
 const MAX_TILES = 3000;
@@ -26,11 +26,15 @@ async function trimTiles() {
 self.addEventListener('fetch', e => {
   const req = e.request; if (req.method !== 'GET') return;
   const url = new URL(req.url);
-  // Teselas del mapa (PNOA / mapa base IGN): primero caché, para ver el mapa ya visitado sin cobertura
+  // Teselas del mapa (PNOA / mapa base IGN). Las que pide el mapa salen primero de la caché:
+  // las descargadas a propósito (aprov-offline, no se borran solas) o las ya vistas (aprov-teselas, máx. MAX_TILES).
+  // Las descargas que hace la propia app (no son imágenes) van directas a la red.
   if (url.hostname === 'www.ign.es' && url.pathname.startsWith('/wmts/')) {
-    e.respondWith(caches.open(TILES).then(async c => {
-      const hit = await c.match(req); if (hit) return hit;
-      const res = await fetch(req); if (res.ok || res.type === 'opaque') { c.put(req, res.clone()); trimTiles(); }
+    if (req.destination !== 'image') return;
+    e.respondWith(caches.match(req).then(async hit => {
+      if (hit) return hit;
+      const res = await fetch(req);
+      if (res.ok || res.type === 'opaque') { const c = await caches.open(TILES); c.put(req, res.clone()); trimTiles(); }
       return res;
     }));
     return;

@@ -38,6 +38,30 @@ Abre la dirección de la app con cobertura y:
 
 Aparecerá el icono del pino y se abrirá a pantalla completa, como una app.
 
+### Recortar parcelas (pastos y otras zonas que no se aprovechan)
+
+Cuando una parcela quemada incluye pastos u otras zonas sin pinar, se recorta en el mapa:
+
+1. Toca la parcela (ya añadida a la solicitud) y pulsa **✂ Recortar**.
+2. Elige el modo:
+   - **Excluir zona:** se dibuja el contorno de los pastos, que se restan.
+   - **Conservar solo zona:** se dibuja el contorno del pinar y se descarta el resto.
+3. Toca el mapa punto a punto siguiendo el contorno. **◎ Mi posición** añade un punto donde estás, para ir recorriendo el límite a pie, y **↶ Punto** borra el último.
+4. Pulsa **Aplicar**.
+
+Se pueden hacer varios recortes en una misma parcela; **Quitar recortes** devuelve la parcela a su forma original.
+
+Desde ese momento solo cuenta la superficie recortada: la superficie de la parcela, los pies y el volumen a extraer, las UTM (centro de la zona recortada) y el informe. En Observaciones de la localización se anota la superficie excluida. En el croquis, las zonas excluidas aparecen rayadas en gris.
+
+### Ortofoto sin conexión
+
+Antes de ir a una zona sin cobertura, pulsa **⤓ Foto** en el mapa:
+
+- **Zona:** las parcelas de la solicitud, la vista actual o todo el incendio.
+- **Detalle:** el recomendado es el zoom 18 (~0,5 m). La app indica cuántas fotos y cuántos MB va a bajar.
+
+Lo descargado se ve en el mapa sin conexión y sirve también para hacer el croquis. Se guarda en el móvil hasta que pulses **Borrar descargas**.
+
 ### Dictado por voz
 
 Cada campo de texto tiene un botón de micrófono. Al pulsarlo se dicta en español; al volver a pulsarlo, o al dejar de hablar, se para.
@@ -51,8 +75,8 @@ Cada campo de texto tiene un botón de micrófono. Al pulsarlo se dicta en espa�
 
 - **La primera vez:** abre la app con conexión para que se guarde en el móvil.
 - **Sin cobertura:** funcionan el formulario, los cálculos y la descarga del Word.
-- **Mapa:** se guardan las zonas que ya se han visto con conexión (hasta unas 3.000 teselas). Antes de salir al monte, recorre la zona en el mapa.
-- **Croquis:** necesita conexión para descargar la ortofoto PNOA. Sin ella, sale sin ortofoto.
+- **Mapa:** usa la ortofoto descargada con **⤓ Foto** y, además, las zonas ya vistas con conexión (hasta unas 3.000 fotos).
+- **Croquis:** con conexión descarga la ortofoto del IGN. Sin conexión, usa las fotos descargadas; si no hay, sale sin ortofoto.
 - **Copias:** las solicitudes se guardan en cada dispositivo. Para pasarlas a otro, usa *Informe → Exportar copia* y luego *Importar copia* en el otro.
 
 ## 3. Actualizar las parcelas (otro incendio o un KML corregido)
