@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1f3d2b">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Aprov. incendio">
+<title>Aprovechamientos tras incendio</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root{--g:#1f3d2b;--g2:#2f5a40;--fire:#e0441b;--blue:#2b7bd6;--bg:#f4f2ec;--card:#fff;--ink:#1d1d1b;--mut:#6b6a64;--line:#dcd8cc}
+*{box-sizing:border-box;min-width:0}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+header{position:fixed;top:0;left:0;right:0;z-index:1001;background:var(--g);color:#fff;padding:calc(env(safe-area-inset-top) + 8px) 10px 8px;display:flex;gap:8px;align-items:center}
+header h1{font-size:15px;margin:0;white-space:nowrap;font-weight:700}
+header select{flex:1;font-size:15px;padding:8px;border-radius:8px;border:0;background:#fff;color:var(--ink);height:40px}
+header button{height:40px;border:0;border-radius:8px;background:var(--fire);color:#fff;font-weight:700;padding:0 12px;font-size:15px}
+nav{position:fixed;bottom:0;left:0;right:0;z-index:1001;background:#fff;border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(4,1fr);padding-bottom:env(safe-area-inset-bottom)}
+nav button{border:0;background:none;padding:10px 4px 12px;font-size:13px;color:var(--mut);font-weight:600;min-height:54px}
+nav button b{display:block;font-size:18px;line-height:1.1}
+nav button.on{color:var(--g);box-shadow:inset 0 3px 0 var(--g)}
+main{position:fixed;top:calc(env(safe-area-inset-top) + 56px);bottom:calc(env(safe-area-inset-bottom) + 55px);left:0;right:0;overflow:auto}
+.view{display:none;padding:12px;max-width:900px;margin:0 auto}.view.on{display:block}
+#v-mapa{padding:0;max-width:none;height:100%}#v-mapa.on{display:block}
+#map{position:absolute;inset:0}
+.mapbar{position:absolute;z-index:1000;top:10px;left:10px;right:10px;display:flex;gap:6px;flex-wrap:wrap}
+.mapbar input{width:76px;height:42px;border:1px solid var(--line);border-radius:8px;padding:0 8px;font-size:16px}
+.mapbar button,.btn{height:42px;border:0;border-radius:8px;background:var(--g);color:#fff;font-weight:600;padding:0 12px;font-size:15px;cursor:pointer}
+.btn.sec{background:#fff;color:var(--g);border:1.5px solid var(--g)}.btn.fire{background:var(--fire)}.btn.big{height:50px;font-size:17px;width:100%}
+.chip{position:absolute;z-index:1000;bottom:12px;left:10px;right:10px;background:#fff;border-radius:12px;padding:10px 12px;box-shadow:0 4px 16px rgba(0,0,0,.25);font-size:14px}
+.chip b{font-size:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+.card h2{font-size:17px;margin:0 0 10px;color:var(--g)}
+details.card>summary{font-weight:700;color:var(--g);font-size:16px;cursor:pointer;list-style:none}
+details.card>summary::after{content:' ▾'}details.card[open]>summary{margin-bottom:10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+label.f{display:flex;flex-direction:column;font-size:13px;color:var(--mut);gap:3px}
+label.f input,label.f select,label.f textarea,td input,td select{font-size:16px;padding:8px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);width:100%}
+textarea{min-height:70px;font-family:inherit}
+.opts{display:flex;flex-wrap:wrap;gap:6px 14px;margin:4px 0 10px}.opts label{display:flex;align-items:center;gap:6px;font-size:15px;min-height:32px}
+.opts input{width:20px;height:20px;accent-color:var(--g)}
+.lbl{font-size:13px;color:var(--mut);margin-top:6px}
+table{border-collapse:collapse;width:100%;font-size:14px}th,td{padding:4px;border-bottom:1px solid var(--line);text-align:right}th{font-size:12px;color:var(--mut);font-weight:600}
+td:first-child,th:first-child{text-align:left}td input{padding:6px;text-align:right;min-width:52px}
+.scroll{overflow-x:auto}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin:8px 0}
+.kpi{background:var(--bg);border-radius:10px;padding:8px 10px}.kpi span{display:block;font-size:12px;color:var(--mut)}.kpi b{font-size:20px}
+.kpi.main{background:var(--g);color:#fff}.kpi.main span{color:#cfe1d4}
+.warn{color:#b3261e;font-size:14px;margin:4px 0}.ok{color:var(--g2);font-size:14px}
+.plist .row{display:grid;grid-template-columns:1fr 90px 70px 34px;gap:6px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
+.plist .row input{font-size:16px;padding:6px;border:1px solid var(--line);border-radius:6px;width:100%}
+.plist .row button{border:0;background:none;color:#b3261e;font-size:22px}
+.small{font-size:13px;color:var(--mut)}
+canvas#croq{width:100%;border-radius:8px;background:#ddd;display:block}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:2000;display:none;align-items:center;justify-content:center;padding:20px}
+.modal.on{display:flex}.modal .box{background:#fff;border-radius:14px;padding:18px;max-width:420px;width:100%}
+.modal .acts{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom) + 70px);background:#222;color:#fff;padding:10px 14px;border-radius:10px;z-index:3000;font-size:14px;display:none;max-width:90vw}
+.leaflet-container{font:inherit}
+.legend{position:absolute;z-index:1000;right:10px;bottom:90px;background:rgba(255,255,255,.92);border-radius:8px;padding:6px 8px;font-size:12px;line-height:1.6}
+.legend i{display:inline-block;width:12px;height:12px;border:2px solid;margin-right:5px;vertical-align:-2px}
+</style>
+</head>
+<body>
+<header><h1>Aprov. incendio</h1><select id="selSol" aria-label="Solicitud"></select><button id="bNueva" title="Nueva solicitud">+ Nueva</button></header>
+<main>
+ <section class="view on" id="v-mapa">
+  <div id="map"></div>
+  <div class="mapbar"><input id="qPol" inputmode="numeric" placeholder="Políg."><input id="qPar" inputmode="numeric" placeholder="Parcela"><button id="bBuscar">Buscar</button><button id="bCapa" class="btn sec" style="background:#fff">Mapa</button><button id="bGps" class="btn sec" style="background:#fff">◎</button></div>
+  <div class="legend"><div><i style="border-color:#ffb000"></i>Quemado</div><div><i style="border-color:#ff2a00;background:rgba(255,42,0,.35)"></i>Esta solicitud</div><div><i style="border-color:#3aa0ff;background:rgba(58,160,255,.25)"></i>Otras</div></div>
+  <div class="chip" id="chip">Toca una parcela quemada para añadirla a la solicitud o quitarla.</div>
+ </section>
+ <section class="view" id="v-datos"></section>
+ <section class="view" id="v-madera"></section>
+ <section class="view" id="v-informe"></section>
+</main>
+<nav><button data-v="mapa" class="on"><b>◱</b>Mapa</button><button data-v="datos"><b>✎</b>Datos</button><button data-v="madera"><b>▲</b>Madera</button><button data-v="informe"><b>▤</b>Informe</button></nav>
+<div class="modal" id="modal"><div class="box"><div id="mTxt"></div><div class="acts"><button class="btn sec" id="mNo">Cancelar</button><button class="btn" id="mSi">Aceptar</button></div></div></div>
+<div id="toast"></div>
+<input type="file" id="fImport" accept=".json,application/json" hidden>
+<input type="file" id="fKml" accept=".kml" hidden>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>var NOMAP=!window.L;if(NOMAP){(function(){var me=function(){return o;},o;o={addTo:me,on:me,setView:me,fitBounds:me,invalidateSize:me,removeLayer:me,setStyle:me,setLatLng:me,extend:me,hasLayer:function(){return true;},isValid:function(){return false;},getBounds:function(){return o;}};
+window.L={map:me,tileLayer:me,polygon:me,canvas:me,latLngBounds:me,circleMarker:me,control:{zoom:me}};})();}</script>
+<script>var DATA=null,TPL=null;</script>
+<script src="js/core.js"></script>
+<script>
+{
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let P=[];
+// ---------- estado ----------
+let sols=[],cur=0;
+function load(){try{const s=JSON.parse(localStorage.getItem('af_sols')||'null');if(s&&s.length){sols=s;cur=+localStorage.getItem('af_cur')||0;}}catch(e){}
+ if(!sols.length)sols=[nuevaSol()];if(cur>=sols.length)cur=0;}
+function save(){try{localStorage.setItem('af_sols',JSON.stringify(sols));localStorage.setItem('af_cur',cur);}catch(e){}}
+function nuevaSol(){return {id:Date.now(),f:{prov:'Toledo',fecha:new Date().toISOString().slice(0,10)},cb:{},parcels:[],sp:[nuevaEspecie(),nuevaEspecie()],g:{}};}
+const S=()=>sols[cur];
+function toast(t){const e=$('#toast');e.textContent=t;e.style.display='block';clearTimeout(e._t);e._t=setTimeout(()=>e.style.display='none',2600);}
+function ask(html,ok){$('#mTxt').innerHTML=html;$('#modal').classList.add('on');$('#mSi').onclick=()=>{$('#modal').classList.remove('on');ok();};$('#mNo').onclick=()=>$('#modal').classList.remove('on');}
+function nombreSol(s,i){return (s.f.exp?s.f.exp:'Solicitud '+(i+1))+(s.f.ap1||s.f.razon?' · '+(s.f.razon||((s.f.nombre||'')+' '+s.f.ap1)):'')+' ('+s.parcels.length+')';}
+function renderSel(){$('#selSol').innerHTML=sols.map((s,i)=>`<option value="${i}" ${i===cur?'selected':''}>${esc(nombreSol(s,i))}</option>`).join('');}
+$('#selSol').onchange=e=>{cur=+e.target.value;save();renderAll();};
+$('#bNueva').onclick=()=>{sols.push(nuevaSol());cur=sols.length-1;save();renderAll();toast('Nueva solicitud creada. Selecciona sus parcelas en el mapa.');};
+// ---------- navegación ----------
+$$('nav button').forEach(b=>b.onclick=()=>show(b.dataset.v));
+function show(v){if(!sols.length)return;$$('nav button').forEach(x=>x.classList.toggle('on',x.dataset.v===v));$$('.view').forEach(x=>x.classList.toggle('on',x.id==='v-'+v));
+ if(v==='mapa')setTimeout(()=>map.invalidateSize(),50);if(v==='madera')renderMadera();if(v==='informe')renderInforme();if(v==='datos')renderDatos();}
+// ---------- mapa ----------
+const map=L.map('map',{zoomControl:false,preferCanvas:true}).setView([39.6,-4.9],12);
+L.control.zoom({position:'bottomleft'}).addTo(map);
+const wmts=(svc,layer,fmt)=>`https://www.ign.es/wmts/${svc}?service=WMTS&request=GetTile&version=1.0.0&Format=image/${fmt}&layer=${layer}&style=default&tilematrixset=GoogleMapsCompatible&TileMatrix={z}&TileRow={y}&TileCol={x}`;
+const orto=L.tileLayer(wmts('pnoa-ma','OI.OrthoimageCoverage','jpeg'),{maxZoom:20,maxNativeZoom:19,attribution:'PNOA © IGN-CNIG'}).addTo(map);
+const base=L.tileLayer(wmts('ign-base','IGNBaseTodo','png'),{maxZoom:20,maxNativeZoom:17,attribution:'Mapa base © IGN-CNIG'});
+$('#bCapa').onclick=()=>{if(map.hasLayer(orto)){map.removeLayer(orto);base.addTo(map);$('#bCapa').textContent='Orto';}else{map.removeLayer(base);orto.addTo(map);$('#bCapa').textContent='Mapa';}};
+let gpsM=null;$('#bGps').onclick=()=>{if(!navigator.geolocation)return toast('Ubicación no disponible');navigator.geolocation.getCurrentPosition(p=>{const ll=[p.coords.latitude,p.coords.longitude];if(gpsM)gpsM.setLatLng(ll);else gpsM=L.circleMarker(ll,{radius:8,color:'#fff',fillColor:'#2b7bd6',fillOpacity:1,weight:3}).addTo(map);map.setView(ll,16);},()=>toast('No se pudo obtener la ubicación'),{enableHighAccuracy:true,timeout:10000});};
+const rend=L.canvas({tolerance:6});let layers=[];
+function decode(polys){return polys.map(rings=>rings.map(f=>{const out=[];let x=f[0],y=f[1];out.push([y/1e6,x/1e6]);for(let i=2;i<f.length;i+=2){x+=f[i];y+=f[i+1];out.push([y/1e6,x/1e6]);}return out;}));}
+function owner(i){if(S().parcels.some(p=>p.i===i))return cur;for(let k=0;k<sols.length;k++)if(k!==cur&&sols[k].parcels.some(p=>p.i===i))return k;return -1;}
+function styleFor(i){const o=owner(i);if(o===cur)return {color:'#ff2a00',weight:2.5,fillColor:'#ff2a00',fillOpacity:.35};if(o>=0)return {color:'#3aa0ff',weight:1.5,fillColor:'#3aa0ff',fillOpacity:.25};return {color:'#ffb000',weight:1,fillColor:'#ffb000',fillOpacity:.06};}
+function buildLayers(){layers.forEach(l=>l&&map.removeLayer(l));layers=P.map((q,i)=>{const lyr=L.polygon(decode(q[6]),Object.assign({renderer:rend},styleFor(i)));lyr.on('click',()=>tapParcel(i));lyr.addTo(map);return lyr;});
+ const b=L.latLngBounds([]);layers.forEach(l=>b.extend(l.getBounds()));if(b.isValid())map.fitBounds(b);}
+function restyle(){layers.forEach((l,i)=>l.setStyle(styleFor(i)));}
+const ha=i=>P[i][3]/10000;
+const pName=i=>'Pol. '+parseInt(P[i][0],10)+' · Parc. '+parseInt(P[i][1],10)+(P[i][2]==='X'?' (dominio público)':'');
+function tapParcel(i){const o=owner(i),s=S();
+ if(o===cur){s.parcels=s.parcels.filter(p=>p.i!==i);chip(i,'Quitada de la solicitud');}
+ else if(o>=0){chipMove(i,o);return;}
+ else{s.parcels.push({i,sup:ha(i).toFixed(2).replace('.',','),rec:'',obs:''});chip(i,'Añadida a la solicitud');}
+ save();restyle();renderSel();}
+function chip(i,msg){const t=supTotal(S());$('#chip').innerHTML=`<b>${esc(pName(i))}</b> · ${fmt(ha(i),2)} ha quemadas<br>${esc(msg)}. Solicitud: ${S().parcels.length} parcelas, ${fmt(t,2)} ha.`;}
+function chipMove(i,o){$('#chip').innerHTML=`<b>${esc(pName(i))}</b> está en «${esc(nombreSol(sols[o],o))}». <button class="btn" id="bMover" style="height:36px;margin-top:6px">Mover a esta solicitud</button>`;
+ $('#bMover').onclick=()=>{sols[o].parcels=sols[o].parcels.filter(p=>p.i!==i);S().parcels.push({i,sup:ha(i).toFixed(2).replace('.',','),rec:'',obs:''});save();restyle();renderSel();chip(i,'Movida a esta solicitud');};}
+$('#bBuscar').onclick=()=>{const pol=parseInt($('#qPol').value,10),par=parseInt($('#qPar').value,10);
+ const hits=P.map((q,i)=>i).filter(i=>(isNaN(pol)||parseInt(P[i][0],10)===pol)&&(isNaN(par)||parseInt(P[i][1],10)===par));
+ if(!hits.length)return toast('No hay parcelas quemadas con ese polígono/parcela');
+ const b=L.latLngBounds([]);hits.forEach(i=>b.extend(layers[i].getBounds()));map.fitBounds(b,{maxZoom:17});
+ hits.forEach(i=>{layers[i].setStyle({color:'#fff',weight:4});setTimeout(()=>layers[i].setStyle(styleFor(i)),1800);});
+ if(hits.length===1&&NOMAP){tapParcel(hits[0]);return;}
+ if(hits.length===1)chip(hits[0],owner(hits[0])===cur?'Ya está en la solicitud (tócala para quitarla)':'Tócala para añadirla');else toast(hits.length+' parcelas encontradas');};
+// ---------- formulario de datos ----------
+const FORM=[
+ ['Expediente',[['t','exp','Nº de expediente']]],
+ ['Titular del monte',[['t','nombre','Nombre'],['t','ap1','1º apellido'],['t','ap2','2º apellido'],['t','razon','Razón social (personas jurídicas)'],['t','domicilio','Domicilio'],['t','tit_prov','Provincia'],['t','tit_cp','C.P.'],['t','tit_pob','Población'],['t','tel','Teléfono'],['t','movil','Teléfono móvil'],['t','email','Correo electrónico']]],
+ ['Parcela de actuación',[['t','monte','Nombre del monte'],['t','prov','Provincia'],['t','tm','Término municipal'],
+   ['c','Existe afección a',['mup','vp','dph','consorcio','carretera'],['MUP','VP','DPH','Consorcio/Convenio','Carretera/Camino']],
+   ['r','IGFS vigente',['igfs_no','igfs_si'],['No','Sí']],['t','igfs_fecha','Fecha de aprobación IGFS'],['t','pendiente','Pendiente media (%)'],['t','altitud','Altitud media (m)'],
+   ['r','Exposición',['solana','umbria'],['Solana','Umbría']],['r','Tipo de terreno',['forestal','agricola'],['Forestal','Agrícola']],
+   ['c','Naturaleza del sustrato',['silic','calizo','yesoso','salino','sust_otros'],['Silíceo','Calizo','Yesoso','Salino','Otros']],['t','sust_otros_txt','Otros sustratos (indicar)'],
+   ['t','cauces','Cauces de agua permanentes'],['r','Espacio Natural Protegido',['enp_no','enp_si'],['No','Sí']],['t','enp_cual','ENP: indicar cuál'],['t','fauna','Especies de fauna y flora protegidas']]],
+ ['Vegetación',[['t','esp1_fcc','Especie 1: Fcc (%)'],['t','esp2_fcc','Especie 2: Fcc (%)'],['t','mat_esp','Matorral: especies'],['t','mat_fcc','Matorral: Fcc (%)'],
+   ['c','Estado vegetativo',['vigoroso','normal','decrepito','plagas'],['Vigoroso','Normal','Decrépito','Enfermedades/plagas']],['t','plaga_txt','Enfermedad/plaga (indicar cuál)'],
+   ['c','Afección a quercíneas por «La seca»',['seca'],['Sí']]]],
+ ['Época inhábil por razones biológicas',[['c','',['m1','m2','m3','m4','m5','m6','m7','m8','m9','m10','m11','m12'],['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']]]],
+ ['Observaciones de la parcela',[['a','obs_parcela','Observaciones']]]
+];
+function fieldHtml(x){const s=S();
+ if(x[0]==='t')return `<label class="f">${esc(x[2])}<input data-f="${x[1]}" value="${esc(s.f[x[1]]||'')}"></label>`;
+ if(x[0]==='a')return `<label class="f" style="grid-column:1/-1">${esc(x[2])}<textarea data-f="${x[1]}">${esc(s.f[x[1]]||'')}</textarea></label>`;
+ const typ=x[0]==='r'?'radio':'checkbox';const g='g'+x[2].join('');
+ return `<div style="grid-column:1/-1">${x[1]?`<div class="lbl">${esc(x[1])}</div>`:''}<div class="opts">${x[2].map((k,j)=>`<label><input type="${typ}" name="${g}" data-cb="${k}" data-grp="${typ==='radio'?x[2].join(','):''}" ${s.cb[k]?'checked':''}>${esc(x[3][j])}</label>`).join('')}</div></div>`;}
+function renderDatos(){const s=S();
+ $('#v-datos').innerHTML=`<div class="card"><h2>Parcelas de la solicitud</h2><div class="small">Superficie quemada de cada parcela (editable), recinto y observaciones. Se seleccionan en el mapa.</div>${parcelList()}</div>`+
+ FORM.map(([t,fs],k)=>`<details class="card" ${k<2?'open':''}><summary>${esc(t)}</summary><div class="grid">${fs.map(fieldHtml).join('')}</div></details>`).join('');
+ bindForm($('#v-datos'));bindPlist();}
+function parcelList(){const s=S();if(!s.parcels.length)return '<p class="warn">Sin parcelas. Ve al mapa y toca las parcelas quemadas que solicitan tratamiento.</p>';
+ return `<div class="plist"><div class="row small"><span>Parcela</span><span>Sup. (ha)</span><span>Recinto</span><span></span></div>${s.parcels.map((p,k)=>`<div class="row"><span>${esc(pName(p.i))}<br><input data-po="${k}" placeholder="Observaciones" value="${esc(p.obs||'')}" style="margin-top:4px"></span><input data-ps="${k}" inputmode="decimal" value="${esc(p.sup)}"><input data-pr="${k}" value="${esc(p.rec||'')}"><button data-pd="${k}" aria-label="Quitar">×</button></div>`).join('')}</div><p><b>Total: ${fmt(supTotal(s),2)} ha</b></p>`;}
+function bindPlist(){const s=S();
+ $$('[data-ps]').forEach(e=>e.oninput=()=>{s.parcels[+e.dataset.ps].sup=e.value;save();});
+ $$('[data-pr]').forEach(e=>e.oninput=()=>{s.parcels[+e.dataset.pr].rec=e.value;save();});
+ $$('[data-po]').forEach(e=>e.oninput=()=>{s.parcels[+e.dataset.po].obs=e.value;save();});
+ $$('[data-pd]').forEach(e=>e.onclick=()=>{s.parcels.splice(+e.dataset.pd,1);save();restyle();renderSel();renderDatos();});}
+function bindForm(root){const s=S();
+ root.querySelectorAll('[data-f]').forEach(e=>e.oninput=()=>{s.f[e.dataset.f]=e.value;save();if(e.dataset.f==='exp'||e.dataset.f==='ap1'||e.dataset.f==='razon')renderSel();});
+ root.querySelectorAll('[data-cb]').forEach(e=>e.onchange=()=>{if(e.dataset.grp)e.dataset.grp.split(',').forEach(k=>s.cb[k]=false);s.cb[e.dataset.cb]=e.checked;save();});}
+// ---------- madera ----------
+const GRIDS=[
+ ['le','Aprovechamiento de leñas',['Especie','Poda nº pies','Resalvos nº matacanes','Volumen (estéreos)','Peso (kg)','Observaciones'],5,null,[0,1,2,3,4,5]],
+ ['re','Aprovechamiento de resinas',['A vida: nº pies','A vida: peso (kg)','A vida: obs.','A muerte: nº pies','A muerte: peso (kg)','A muerte: obs.'],4,['De 30 a 39','De 40 a 49','De 40 a 59','De 50 ó más'],[1,2,3,4,5,6]],
+ ['co','Aprovechamiento de corcho',['Bornizo: nº pies','Bornizo: peso (kg)','Bornizo: obs.','Reproducción: nº pies','Reproducción: peso (kg)','Reproducción: obs.'],6,['De 20 a 29','De 30 a 39','De 40 a 49','De 50 a 59','De 60 a 69','70 ó más'],[1,2,3,4,5,6]],
+ ['de','Desbroce',['Especie','Sup. (ha)','Modo más adecuado'],3,null,[0,1,2]]];
+function renderMadera(){const s=S(),A=supTotal(s);
+ let h=`<div class="card"><h2>Volumen de madera a extraer</h2><div class="small">Superficie de la solicitud: <b>${fmt(A,2)} ha</b> en ${s.parcels.length} parcelas. Rellena una o dos especies.</div></div>`;
+ s.sp.forEach((sp,k)=>{h+=`<div class="card" id="sp${k}"><h2>Especie ${k+1}</h2><div class="grid">
+  <label class="f">Especie<select data-s="esp" data-k="${k}"><option value="">—</option>${Object.keys(ESPECIES).map(e=>`<option value="${e}" ${sp.esp===e?'selected':''}>${ESPECIES[e].nombre}</option>`).join('')}</select></label>
+  <label class="f">Distancia media entre pies (m)<input data-s="d" data-k="${k}" inputmode="decimal" value="${esc(sp.d)}"></label>
+  <label class="f">Disposición<select data-s="disp" data-k="${k}">${['Cuadrada','Tresbolillo'].map(o=>`<option ${sp.disp===o?'selected':''}>${o}</option>`).join('')}</select></label>
+  <label class="f">Calidad IFN3<select data-s="cal" data-k="${k}">${['Todas','1','2','3','4','5','6'].map(o=>`<option ${sp.cal===o?'selected':''}>${o}</option>`).join('')}</select></label></div>
+  <div class="scroll" style="margin-top:10px"><table><thead><tr><th>CD (cm)</th><th>% pies</th><th>% extracción</th><th>Altura medida (m)</th><th>Altura usada</th><th>m³/pie</th></tr></thead><tbody>
+  ${CDS.map((cd,i)=>`<tr><td>${cd===70?'70+':cd}</td><td><input data-a="pct" data-k="${k}" data-i="${i}" inputmode="decimal" value="${esc(sp.pct[i])}"></td><td><input data-a="ext" data-k="${k}" data-i="${i}" inputmode="decimal" value="${esc(sp.ext[i])}"></td><td><input data-a="hm" data-k="${k}" data-i="${i}" inputmode="decimal" value="${esc(sp.hm[i])}" placeholder="—"></td><td data-h="${k}-${i}"></td><td data-v="${k}-${i}"></td></tr>`).join('')}
+  </tbody></table></div><div id="res${k}"></div></div>`;});
+ h+=`<div class="card"><h2>Por parcela</h2><div id="porParc"></div></div>`;
+ h+=GRIDS.map(([pre,t,cols,rows,rl,idx])=>{const d=(s.g[pre]=s.g[pre]||[]);return `<details class="card"><summary>${t}</summary><div class="scroll"><table><thead><tr>${rl?'<th>Diámetro (cm)</th>':''}${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>${Array.from({length:rows},(_,r)=>`<tr>${rl?`<td>${rl[r]}</td>`:''}${cols.map((c,j)=>`<td><input data-gp="${pre}" data-r="${r}" data-c="${j}" value="${esc((d[r]||[])[j]||'')}" style="min-width:${/obs|Especie|Modo/i.test(c)?120:70}px;text-align:left"></td>`).join('')}</tr>`).join('')}</tbody></table></div></details>`;}).join('');
+ $('#v-madera').innerHTML=h;
+ $$('#v-madera [data-s]').forEach(e=>e.oninput=e.onchange=()=>{s.sp[+e.dataset.k][e.dataset.s]=e.value;save();calcView();});
+ $$('#v-madera [data-a]').forEach(e=>e.oninput=()=>{s.sp[+e.dataset.k][e.dataset.a][+e.dataset.i]=e.value;save();calcView();});
+ $$('#v-madera [data-gp]').forEach(e=>e.oninput=()=>{const g=s.g[e.dataset.gp];const r=+e.dataset.r;g[r]=g[r]||[];g[r][+e.dataset.c]=e.value;save();});
+ calcView();}
+function calcView(){const s=S(),A=supTotal(s);const res=s.sp.map(sp=>calcEspecie(sp,A));
+ res.forEach((r,k)=>{const box=$('#res'+k);if(!box)return;
+  CDS.forEach((cd,i)=>{const f=r.filas[i];$(`[data-h="${k}-${i}"]`).textContent=f&&f.h?fmt(f.h,2):'';$(`[data-v="${k}-${i}"]`).textContent=f&&f.v?fmt(f.v,3):'';});
+  if(!r.ok){box.innerHTML='<p class="small">Elige especie y distancia media para calcular.</p>';return;}
+  box.innerHTML=`<div class="kpis"><div class="kpi"><span>Pies/ha</span><b>${fmt(r.N,0)}</b></div><div class="kpi"><span>Volumen existente</span><b>${fmt(r.Vha,1)}</b> m³/ha</div><div class="kpi"><span>Extracción</span><b>${fmt(r.Vext_ha,1)}</b> m³/ha</div><div class="kpi main"><span>Volumen a extraer (${fmt(A,2)} ha)</span><b>${fmt(r.Vext,1)} m³</b></div><div class="kpi"><span>Pies a extraer</span><b>${fmt(r.Next,0)}</b></div><div class="kpi"><span>Pies/ha remanentes</span><b>${fmt(r.Nrem_ha,0)}</b></div></div>${r.avisos.map(a=>`<p class="warn">⚠ ${esc(a)}</p>`).join('')||'<p class="ok">✓ Cálculo completo</p>'}`;});
+ const pp=$('#porParc');if(pp)pp.innerHTML=s.parcels.length?`<div class="scroll"><table><thead><tr><th>Parcela</th><th>Sup. (ha)</th><th>Pies a extraer</th><th>Volumen a extraer (m³)</th></tr></thead><tbody>${s.parcels.map(p=>{const a=num(p.sup);let n=0,v=0;res.forEach(r=>{if(r.ok){n+=r.Next_ha*a;v+=r.Vext_ha*a;}});return `<tr><td>${esc(pName(p.i))}</td><td>${fmt(a,2)}</td><td>${fmt(n,0)}</td><td>${fmt(v,2)}</td></tr>`;}).join('')}</tbody></table></div>`:'<p class="warn">Sin parcelas seleccionadas.</p>';}
+// ---------- informe ----------
+let croquis=null;
+function renderInforme(){const s=S(),A=supTotal(s);const res=s.sp.map(sp=>calcEspecie(sp,A));const V=res.reduce((a,r)=>a+(r.ok?r.Vext:0),0);
+ const falta=[];if(!s.parcels.length)falta.push('No hay parcelas seleccionadas');if(!res.some(r=>r.ok))falta.push('Falta el cálculo de madera (pestaña Madera)');res.forEach((r,k)=>r.ok&&r.avisos.forEach(a=>falta.push('Especie '+(k+1)+': '+a)));if(!s.f.exp)falta.push('Falta el nº de expediente');
+ $('#v-informe').innerHTML=`<div class="card"><h2>Resumen</h2><div class="kpis"><div class="kpi"><span>Parcelas</span><b>${s.parcels.length}</b></div><div class="kpi"><span>Superficie</span><b>${fmt(A,2)}</b> ha</div><div class="kpi main"><span>Volumen a extraer</span><b>${fmt(V,1)} m³</b></div></div>${falta.map(f=>`<p class="warn">⚠ ${esc(f)}</p>`).join('')}</div>
+ <div class="card"><h2>Estado final y firma</h2><div class="grid">${fieldHtml(['r','El monte quedará en',['buen','mal'],['Buen estado','Mal estado']])}
+ <label class="f">Densidad final (pies/ha)<input data-f="fin_pies" value="${esc(s.f.fin_pies||'')}" placeholder="${esc(fmt(res.reduce((a,r)=>a+(r.ok?r.Nrem_ha:0),0),0))} (calculado)"></label>
+ <label class="f">Fcc final (%)<input data-f="fin_fcc" value="${esc(s.f.fin_fcc||'')}"></label>
+ ${fieldHtml(['a','obsA','Observaciones (1)'])}${fieldHtml(['a','obsB','Observaciones (2)'])}
+ <label class="f">Lugar<input data-f="lugar" value="${esc(s.f.lugar||'')}"></label><label class="f">Fecha<input type="date" data-f="fecha" value="${esc(s.f.fecha||'')}"></label><label class="f">Agente Medioambiental<input data-f="agente" value="${esc(s.f.agente||'')}"></label></div></div>
+ <div class="card"><h2>Croquis sobre ortofoto PNOA</h2><canvas id="croq" width="1600" height="1130"></canvas><p class="small" id="croqMsg">Se genera con las parcelas de la solicitud. Necesita conexión a internet.</p><button class="btn sec" id="bCroq">Generar croquis</button></div>
+ <button class="btn big fire" id="bWord">Descargar informe Word</button>
+ <div class="card" style="margin-top:12px"><h2>Copias y datos</h2><div class="small">Las solicitudes se guardan en este navegador. Exporta una copia para pasarlas a otro dispositivo.</div><p style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sec" id="bExp">Exportar copia</button><button class="btn sec" id="bImp">Importar copia</button><button class="btn sec" id="bKml">Cargar otro KML</button><button class="btn sec" id="bDel" style="color:#b3261e;border-color:#b3261e">Borrar solicitud</button></p></div>`;
+ bindForm($('#v-informe'));croquis=null;
+ $('#bCroq').onclick=()=>makeCroquis().catch(e=>toast('Error en el croquis: '+e.message));
+ $('#bWord').onclick=descargarWord;
+ $('#bExp').onclick=()=>download(new Blob([JSON.stringify({version:1,sols},null,1)],{type:'application/json'}),'solicitudes_aprovechamiento.json');
+ $('#bImp').onclick=()=>$('#fImport').click();$('#bKml').onclick=()=>$('#fKml').click();
+ $('#bDel').onclick=()=>ask('¿Borrar la solicitud «'+esc(nombreSol(s,cur))+'»? No se puede deshacer.',()=>{sols.splice(cur,1);if(!sols.length)sols=[nuevaSol()];cur=0;save();renderAll();});}
+function download(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},4000);}
+$('#fImport').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const d=JSON.parse(await f.text());if(!d.sols)throw new Error('formato');ask(`Importar ${d.sols.length} solicitudes. ¿Añadirlas a las actuales?`,()=>{sols=sols.concat(d.sols);save();renderAll();toast('Importadas');});}catch(err){toast('Archivo no válido');}e.target.value='';};
+$('#fKml').onchange=async e=>{const f=e.target.files[0];if(!f)return;toast('Leyendo KML…');try{const t=await f.text();const np=parseKml(t);if(!np.length)throw 0;
+ ask(`El KML tiene ${np.length} parcelas. Al cargarlo se vacían las parcelas de todas las solicitudes (los demás datos se conservan). ¿Continuar?`,()=>{P=np;sols.forEach(s=>s.parcels=[]);save();try{localStorage.setItem('af_data','kml-'+Date.now());}catch(e){}buildLayers();renderAll();show('mapa');toast('KML cargado');});}catch(err){toast('No se pudo leer el KML');}e.target.value='';};
+function parseKml(t){const out=[];const pms=t.split('<Placemark').slice(1);for(const p of pms){const g=n=>{const m=p.match(new RegExp('name="'+n+'">([^<]*)<'));return m?m[1]:'';};
+ const polys=[];for(const poly of p.split('<Polygon>').slice(1)){const rings=[];const re=/<coordinates>([\s\S]*?)<\/coordinates>/g;let m;const body=poly.split('</Polygon>')[0];while((m=re.exec(body))){const pts=m[1].trim().split(/\s+/).map(c=>c.split(',').map(Number));const fl=[Math.round(pts[0][0]*1e6),Math.round(pts[0][1]*1e6)];for(let i=1;i<pts.length;i++){fl.push(Math.round(pts[i][0]*1e6)-Math.round(pts[i-1][0]*1e6),Math.round(pts[i][1]*1e6)-Math.round(pts[i-1][1]*1e6));}rings.push(fl);}if(rings.length)polys.push(rings);}
+ if(!polys.length)continue;let area=parseFloat(g('AREA'));if(!(area>0))area=(parseFloat(g('Shape_Area'))||0)*1e4;
+ let X=parseFloat(g('COORX'))||0,Y=parseFloat(g('COORY'))||0;if(!X){let best=null;polys.forEach(rs=>{const c=ringCentroid(rs[0]);if(!best||c[2]>best[2])best=c;});const u=toUtm(best[0],best[1]);X=u[0];Y=u[1];}
+ out.push([g('MASA')||g('POLIGONO')||'0',g('PARCELA')||'0',g('TIPO'),Math.round(area),Math.round(X),Math.round(Y),polys]);}return out;}
+function ringCentroid(f){const pts=[];let x=f[0],y=f[1];pts.push([x/1e6,y/1e6]);for(let i=2;i<f.length;i+=2){x+=f[i];y+=f[i+1];pts.push([x/1e6,y/1e6]);}
+ let A=0,cx=0,cy=0;for(let i=0;i<pts.length;i++){const [x1,y1]=pts[i],[x2,y2]=pts[(i+1)%pts.length];const c=x1*y2-x2*y1;A+=c;cx+=(x1+x2)*c;cy+=(y1+y2)*c;}
+ if(Math.abs(A)<1e-15)return [pts[0][0],pts[0][1],0];return [cx/(3*A),cy/(3*A),Math.abs(A)/2];}
+function toUtm(lon,lat,zone=30){const a=6378137,f=1/298.257222101,e2=f*(2-f),k0=0.9996,lon0=(zone*6-183)*Math.PI/180,phi=lat*Math.PI/180,lam=lon*Math.PI/180;
+ const N=a/Math.sqrt(1-e2*Math.sin(phi)**2),T=Math.tan(phi)**2,C=e2/(1-e2)*Math.cos(phi)**2,A=Math.cos(phi)*(lam-lon0),ep=e2/(1-e2);
+ const M=a*((1-e2/4-3*e2**2/64-5*e2**3/256)*phi-(3*e2/8+3*e2**2/32+45*e2**3/1024)*Math.sin(2*phi)+(15*e2**2/256+45*e2**3/1024)*Math.sin(4*phi)-(35*e2**3/3072)*Math.sin(6*phi));
+ return [k0*N*(A+(1-T+C)*A**3/6+(5-18*T+T*T+72*C-58*ep)*A**5/120)+500000,k0*(M+N*Math.tan(phi)*(A*A/2+(5-T+9*C+4*C*C)*A**4/24+(61-58*T+T*T+600*C-330*ep)*A**6/720))];}
+// croquis
+const R=6378137,mx=lon=>R*lon*Math.PI/180,my=lat=>R*Math.log(Math.tan(Math.PI/4+lat*Math.PI/360));
+function loadImg(url){return new Promise((ok,ko)=>{const im=new Image();im.crossOrigin='anonymous';const t=setTimeout(()=>ko(new Error('tiempo agotado')),25000);im.onload=()=>{clearTimeout(t);ok(im);};im.onerror=()=>{clearTimeout(t);ko(new Error('sin respuesta'));};im.src=url;});}
+async function makeCroquis(){const s=S();if(!s.parcels.length){toast('No hay parcelas en la solicitud');return null;}
+ const cv=$('#croq'),W=cv.width,H=cv.height,ctx=cv.getContext('2d');$('#croqMsg').textContent='Descargando ortofoto PNOA…';
+ const sel=new Set(s.parcels.map(p=>p.i));let x0=1e99,y0=1e99,x1=-1e99,y1=-1e99;
+ const rings=i=>decode(P[i][6]).flat();
+ sel.forEach(i=>rings(i).forEach(r=>r.forEach(([la,lo])=>{const x=mx(lo),y=my(la);x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y);})));
+ let cx=(x0+x1)/2,cy=(y0+y1)/2,w=Math.max((x1-x0)*1.25,400),h=Math.max((y1-y0)*1.25,400*H/W);if(w/h>W/H)h=w*H/W;else w=h*W/H;
+ const bb=[cx-w/2,cy-h/2,cx+w/2,cy+h/2];const px=x=>(x-bb[0])/w*W,py=y=>(bb[3]-y)/h*H;
+ let orthoOk=true;ctx.fillStyle='#cfcfc8';ctx.fillRect(0,0,W,H);
+ try{const url=`https://www.ign.es/wms-inspire/pnoa-ma?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=OI.OrthoimageCoverage&STYLES=&CRS=EPSG:3857&BBOX=${bb.map(v=>v.toFixed(2)).join(',')}&WIDTH=${W}&HEIGHT=${H}&FORMAT=image/jpeg`;
+  const im=await loadImg(url);ctx.drawImage(im,0,0,W,H);ctx.getImageData(0,0,1,1);}catch(e){orthoOk=false;ctx.fillStyle='#cfcfc8';ctx.fillRect(0,0,W,H);}
+ const lat0=Math.atan(Math.sinh(cy/R));
+ const path=i=>{ctx.beginPath();decode(P[i][6]).forEach(poly=>poly.forEach(r=>{r.forEach(([la,lo],j)=>{const X=px(mx(lo)),Y=py(my(la));j?ctx.lineTo(X,Y):ctx.moveTo(X,Y);});ctx.closePath();}));};
+ // vecinas
+ ctx.lineWidth=1.5;ctx.strokeStyle='rgba(255,210,0,.8)';P.forEach((q,i)=>{if(sel.has(i))return;const f=q[6][0][0];const X=px(mx(f[0]/1e6)),Y=py(my(f[1]/1e6));if(X<-W||X>2*W||Y<-H||Y>2*H)return;path(i);ctx.stroke();});
+ sel.forEach(i=>{path(i);ctx.fillStyle='rgba(255,40,0,.22)';ctx.fill('evenodd');ctx.lineWidth=5;ctx.strokeStyle='#ff2200';ctx.stroke();});
+ ctx.font='bold 26px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
+ sel.forEach(i=>{let sx=0,sy=0,n=0;decode(P[i][6])[0][0].forEach(([la,lo])=>{sx+=px(mx(lo));sy+=py(my(la));n++;});const t=parseInt(P[i][0],10)+'-'+parseInt(P[i][1],10);ctx.lineWidth=6;ctx.strokeStyle='rgba(0,0,0,.75)';ctx.strokeText(t,sx/n,sy/n);ctx.fillStyle='#fff';ctx.fillText(t,sx/n,sy/n);});
+ // norte y escala
+ ctx.fillStyle='rgba(255,255,255,.9)';ctx.fillRect(W-90,20,70,95);ctx.fillStyle='#111';ctx.beginPath();ctx.moveTo(W-55,32);ctx.lineTo(W-75,85);ctx.lineTo(W-55,72);ctx.lineTo(W-35,85);ctx.closePath();ctx.fill();ctx.font='bold 22px Arial';ctx.fillText('N',W-55,102);
+ const mpp=w/W*Math.cos(lat0);const nice=[50,100,200,250,500,1000,2000,5000];let L=nice.find(v=>v/mpp>180)||5000;const lp=L/mpp;
+ ctx.fillStyle='rgba(255,255,255,.9)';ctx.fillRect(20,H-80,lp+60,60);ctx.fillStyle='#111';ctx.fillRect(40,H-45,lp,10);ctx.fillStyle='#fff';ctx.fillRect(40+lp/2,H-43,lp/2-2,6);
+ ctx.fillStyle='#111';ctx.font='18px Arial';ctx.textAlign='left';ctx.fillText('0',36,H-62);ctx.textAlign='right';ctx.fillText(L>=1000?(L/1000)+' km':L+' m',40+lp+10,H-62);
+ ctx.textAlign='right';ctx.font='16px Arial';ctx.fillStyle='rgba(255,255,255,.9)';const cap=(orthoOk?'Ortofoto PNOA máxima actualidad © IGN-CNIG':'Ortofoto no disponible')+' · '+(s.f.exp?'Exp. '+s.f.exp+' · ':'')+fmt(supTotal(s),2)+' ha';const tw=ctx.measureText(cap).width;ctx.fillRect(W-tw-30,H-40,tw+20,28);ctx.fillStyle='#111';ctx.fillText(cap,W-20,H-26);
+ let blob=await new Promise(r=>cv.toBlob(r,'image/jpeg',0.86));
+ croquis={bytes:new Uint8Array(await blob.arrayBuffer()),w:W,h:H};
+ $('#croqMsg').textContent=orthoOk?'Croquis listo. Se incluirá al final del informe.':'No se pudo descargar la ortofoto (sin conexión o bloqueada). El croquis se ha hecho sin ella.';return croquis;}
+async function descargarWord(){const s=S();try{if(!croquis&&s.parcels.length){toast('Generando croquis…');await makeCroquis().catch(()=>null);}
+ const bytes=buildDocx(TPL,s,P,croquis);const name='Informe_aprovechamiento_'+(s.f.exp||'solicitud').replace(/[^\w\-]+/g,'_')+'.docx';
+ download(new Blob([bytes],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}),name);toast('Informe descargado: '+name);}catch(e){toast('Error al generar el informe: '+e.message);}}
+function renderAll(){renderSel();restyle();const v=($$('nav button.on')[0]||{}).dataset;if(v&&v.v&&v.v!=='mapa')show(v.v);$('#chip').textContent='Toca una parcela quemada para añadirla a la solicitud o quitarla.';}
+(async()=>{
+ $('#chip').textContent='Cargando parcelas…';
+ try{const [d,t]=await Promise.all([fetch('data/parcelas.json').then(r=>{if(!r.ok)throw 0;return r.json();}),fetch('data/plantilla.json').then(r=>{if(!r.ok)throw 0;return r.json();})]);DATA=d;TPL=t;P=DATA.p;}
+ catch(e){$('#chip').textContent='No se pudieron cargar los datos. Comprueba la conexión y recarga la página.';return;}
+ $('#chip').textContent='Toca una parcela quemada para añadirla a la solicitud o quitarla.';
+load();
+try{const fp=(DATA.meta&&DATA.meta.id)||String(P.length);const prev=localStorage.getItem('af_data'); if(prev&&prev!==fp&&sols.some(s=>s.parcels.length)){sols.forEach(s=>s.parcels=[]);save();setTimeout(()=>toast('La capa de parcelas ha cambiado: vuelve a seleccionar las parcelas de cada solicitud'),800);}
+ localStorage.setItem('af_data',fp);}catch(e){}
+renderSel();buildLayers();
+if(NOMAP){$('#map').innerHTML='<div style="padding:80px 16px;color:#444">El mapa no se ha podido cargar (sin conexión). Puedes añadir parcelas buscándolas por polígono y parcela.</div>';$('.legend').style.display='none';}
+})();
+if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+</script>
+</body>
+</html>
