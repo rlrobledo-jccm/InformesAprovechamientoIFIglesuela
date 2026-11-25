@@ -62,6 +62,11 @@ Antes de ir a una zona sin cobertura, pulsa **⤓ Foto** en el mapa:
 
 Lo descargado se ve en el mapa sin conexión y sirve también para hacer el croquis. Se guarda en el móvil hasta que pulses **Borrar descargas**.
 
+**Cómo hace el croquis sin conexión:**
+- **Fuentes:** compone la ortofoto con las fotos descargadas. Las pide primero al WMTS del IGN y, si ese servidor no permite usarlas en la app, al servicio de teselas PNOA del IDEE (`tms-pnoa-ma.idee.es`), que es la misma ortofoto.
+- **Si ninguna fuente lo permite:** al terminar la descarga lo avisa. Las fotos servirán para ver el mapa, pero no para el croquis.
+- **Alternativa que siempre funciona:** en el mapa, encuadra las parcelas, haz una captura de pantalla del móvil y en *Informe* pulsa **Usar captura del mapa**. Esa imagen irá como croquis en el Word.
+
 ### Dictado por voz
 
 Cada campo de texto tiene un botón de micrófono. Al pulsarlo se dicta en español; al volver a pulsarlo, o al dejar de hablar, se para.

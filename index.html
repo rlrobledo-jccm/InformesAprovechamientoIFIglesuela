@@ -276,12 +276,13 @@ function renderInforme(){const s=S(),A=supTotal(s);const res=s.sp.map(sp=>calcEs
  <label class="f">Fcc final (%)<input data-f="fin_fcc" value="${esc(s.f.fin_fcc||'')}"></label>
  ${fieldHtml(['a','obsA','Observaciones (1)'])}${fieldHtml(['a','obsB','Observaciones (2)'])}
  <label class="f">Lugar<input data-f="lugar" value="${esc(s.f.lugar||'')}"></label><label class="f">Fecha<input type="date" data-f="fecha" value="${esc(s.f.fecha||'')}"></label><label class="f">Agente Medioambiental<input data-f="agente" value="${esc(s.f.agente||'')}"></label></div></div>
- <div class="card"><h2>Croquis sobre ortofoto PNOA</h2><canvas id="croq" width="1600" height="1130"></canvas><p class="small" id="croqMsg">Se genera con las parcelas de la solicitud. Necesita conexión a internet.</p><button class="btn sec" id="bCroq">Generar croquis</button></div>
+ <div class="card"><h2>Croquis sobre ortofoto PNOA</h2><canvas id="croq" width="1600" height="1130"></canvas><p class="small" id="croqMsg">Se genera con las parcelas de la solicitud. Necesita conexión a internet.</p><p style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 0"><button class="btn sec" id="bCroq">Generar croquis</button><button class="btn sec" id="bCroqImg">Usar captura del mapa</button></p><input type="file" id="fCroq" accept="image/*" hidden></div>
  <button class="btn big fire" id="bWord">Descargar informe Word</button>
  <div class="card" style="margin-top:12px"><h2>Copias y datos</h2><div class="small">Las solicitudes se guardan en este navegador. Exporta una copia para pasarlas a otro dispositivo.</div><p style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sec" id="bExp">Exportar copia</button><button class="btn sec" id="bImp">Importar copia</button><button class="btn sec" id="bKml">Cargar otro KML</button><button class="btn sec" id="bDel" style="color:#b3261e;border-color:#b3261e">Borrar solicitud</button></p></div>`;
  bindForm($('#v-informe'));croquis=null;
  $('#bCroq').onclick=()=>makeCroquis().catch(e=>toast('Error en el croquis: '+e.message));
  $('#bWord').onclick=descargarWord;
+ $('#bCroqImg').onclick=()=>$('#fCroq').click();$('#fCroq').onchange=e=>usarCaptura(e.target.files[0]).catch(()=>toast('No se pudo leer la imagen'));
  $('#bExp').onclick=()=>download(new Blob([JSON.stringify({version:1,sols},null,1)],{type:'application/json'}),'solicitudes_aprovechamiento.json');
  $('#bImp').onclick=()=>$('#fImport').click();$('#bKml').onclick=()=>$('#fKml').click();
  $('#bDel').onclick=()=>ask('¿Borrar la solicitud «'+esc(nombreSol(s,cur))+'»? No se puede deshacer.',()=>{sols.splice(cur,1);if(!sols.length)sols=[nuevaSol()];cur=0;save();renderAll();});}
@@ -305,14 +306,14 @@ function toUtm(lon,lat,zone=30){const a=6378137,f=1/298.257222101,e2=f*(2-f),k0=
 const R=6378137,mx=lon=>R*lon*Math.PI/180,my=lat=>R*Math.log(Math.tan(Math.PI/4+lat*Math.PI/360));
 function loadImg(url){return new Promise((ok,ko)=>{const im=new Image();im.crossOrigin='anonymous';const t=setTimeout(()=>ko(new Error('tiempo agotado')),25000);im.onload=()=>{clearTimeout(t);ok(im);};im.onerror=()=>{clearTimeout(t);ko(new Error('sin respuesta'));};im.src=url;});}
 async function makeCroquis(){const s=S();if(!s.parcels.length){toast('No hay parcelas en la solicitud');return null;}
- const cv=$('#croq'),W=cv.width,H=cv.height,ctx=cv.getContext('2d');$('#croqMsg').textContent='Descargando ortofoto PNOA…';
+ const cv=$('#croq');cv.width=1600;cv.height=1130;const W=cv.width,H=cv.height,ctx=cv.getContext('2d');$('#croqMsg').textContent='Descargando ortofoto PNOA…';
  const sel=new Set(s.parcels.map(p=>p.i));let x0=1e99,y0=1e99,x1=-1e99,y1=-1e99;
  const rings=i=>decode(P[i][6]).flat();
  sel.forEach(i=>rings(i).forEach(r=>r.forEach(([la,lo])=>{const x=mx(lo),y=my(la);x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y);})));
  let cx=(x0+x1)/2,cy=(y0+y1)/2,w=Math.max((x1-x0)*1.25,400),h=Math.max((y1-y0)*1.25,400*H/W);if(w/h>W/H)h=w*H/W;else w=h*W/H;
  const bb=[cx-w/2,cy-h/2,cx+w/2,cy+h/2];const px=x=>(x-bb[0])/w*W,py=y=>(bb[3]-y)/h*H;
  let orthoOk=true,orthoIm=null;ctx.fillStyle='#cfcfc8';ctx.fillRect(0,0,W,H);
- try{const url=`https://www.ign.es/wms-inspire/pnoa-ma?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=OI.OrthoimageCoverage&STYLES=&CRS=EPSG:3857&BBOX=${bb.map(v=>v.toFixed(2)).join(',')}&WIDTH=${W}&HEIGHT=${H}&FORMAT=image/jpeg`;
+ try{if(!navigator.onLine)throw new Error('sin conexión');const url=`https://www.ign.es/wms-inspire/pnoa-ma?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=OI.OrthoimageCoverage&STYLES=&CRS=EPSG:3857&BBOX=${bb.map(v=>v.toFixed(2)).join(',')}&WIDTH=${W}&HEIGHT=${H}&FORMAT=image/jpeg`;
   const im=await loadImg(url);ctx.drawImage(im,0,0,W,H);orthoIm=im;ctx.getImageData(0,0,1,1);}catch(e){orthoOk=false;orthoIm=null;ctx.fillStyle='#cfcfc8';ctx.fillRect(0,0,W,H);
   try{if(await orthoFromCache(ctx,bb,W,H)){ctx.getImageData(0,0,1,1);const cc=document.createElement('canvas');cc.width=W;cc.height=H;cc.getContext('2d').drawImage(cv,0,0);orthoIm=cc;orthoOk=true;}}catch(e2){ctx.fillStyle='#cfcfc8';ctx.fillRect(0,0,W,H);}}
  const lat0=Math.atan(Math.sinh(cy/R));
@@ -339,13 +340,19 @@ async function makeCroquis(){const s=S();if(!s.parcels.length){toast('No hay par
  ctx.textAlign='right';ctx.font='16px Arial';ctx.fillStyle='rgba(255,255,255,.9)';const cap=(orthoOk?'Ortofoto PNOA máxima actualidad © IGN-CNIG':'Ortofoto no disponible')+' · '+(s.f.exp?'Exp. '+s.f.exp+' · ':'')+fmt(supTotal(s),2)+' ha'+(anyCut?' · Rayado: zonas excluidas':'');const tw=ctx.measureText(cap).width;ctx.fillRect(W-tw-30,H-40,tw+20,28);ctx.fillStyle='#111';ctx.fillText(cap,W-20,H-26);
  let blob=await new Promise(r=>cv.toBlob(r,'image/jpeg',0.86));
  croquis={bytes:new Uint8Array(await blob.arrayBuffer()),w:W,h:H};
- $('#croqMsg').textContent=orthoOk?'Croquis listo. Se incluirá al final del informe.':'No se pudo descargar la ortofoto (sin conexión o bloqueada). El croquis se ha hecho sin ella.';return croquis;}
+ $('#croqMsg').textContent=orthoOk?'Croquis listo. Se incluirá al final del informe.':'No hay ortofoto utilizable para el croquis (sin conexión y sin fotos descargadas con ⤓ Foto que permitan usarse en el croquis). Se ha hecho sin ella; puedes usar «Usar captura del mapa».';return croquis;}
+async function usarCaptura(file){if(!file)return;const bm=await createImageBitmap(file);const cv=$('#croq'),sc=Math.min(1,1600/bm.width);cv.width=Math.round(bm.width*sc);cv.height=Math.round(bm.height*sc);
+ const ctx=cv.getContext('2d');ctx.drawImage(bm,0,0,cv.width,cv.height);const blob=await new Promise(r=>cv.toBlob(r,'image/jpeg',0.88));
+ croquis={bytes:new Uint8Array(await blob.arrayBuffer()),w:cv.width,h:cv.height};$('#croqMsg').textContent='Se usará esta captura como croquis del informe.';}
 async function descargarWord(){const s=S();try{if(!croquis&&s.parcels.length){toast('Generando croquis…');await makeCroquis().catch(()=>null);}
  const bytes=buildDocx(TPL,s,P,croquis);const name='Informe_aprovechamiento_'+(s.f.exp||'solicitud').replace(/[^\w\-]+/g,'_')+'.docx';
  download(new Blob([bytes],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}),name);toast('Informe descargado: '+name);}catch(e){toast('Error al generar el informe: '+e.message);}}
 // ----- ortofoto sin conexión -----
 const OFF='aprov-offline',ORTO_URL=wmts('pnoa-ma','OI.OrthoimageCoverage','jpeg');
 const tUrl=(z,x,y)=>ORTO_URL.replace('{z}',z).replace('{x}',x).replace('{y}',y);
+const tmsUrl=(z,x,y)=>`https://tms-pnoa-ma.idee.es/1.0.0/pnoa-ma/${z}/${x}/${2**z-1-y}.jpeg`;
+// Pide la tesela permitiendo leerla (CORS): primero WMTS del IGN, si no, TMS del IDEE (misma ortofoto PNOA)
+async function fetchTile(z,x,y){for(const u of [tUrl(z,x,y),tmsUrl(z,x,y)]){try{const r=await fetch(u,{mode:'cors'});if(r.ok&&r.type!=='opaque')return r;}catch(e){}}return null;}
 const lon2x=(lo,z)=>Math.floor((lo+180)/360*2**z),lat2y=(la,z)=>{const r=la*Math.PI/180;return Math.floor((1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*2**z);};
 let offRun=null;
 function offBounds(){const z=($('#offZona input:checked')||{}).value;let pts=[];
@@ -364,22 +371,29 @@ $('#offZona').onchange=offEst;$('#offZ').onchange=offEst;
 $('#offClose').onclick=()=>{if(offRun)offRun.stop=true;$('#offl').classList.remove('on');};
 $('#offDel').onclick=async()=>{if(offRun)return;await caches.delete(OFF);offCount();toast('Descargas borradas');};
 $('#offGo').onclick=async()=>{const tiles=offTiles();if(!tiles.length)return;try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist();}catch(e){}
- const c=await caches.open(OFF);offRun={stop:false};const run=offRun;let done=0,fail=0,k=0;$('#offGo').disabled=true;$('#offClose').textContent='Parar';
- const one=async([z,x,y])=>{const u=tUrl(z,x,y);if(await c.match(u))return;let r=null;
-  try{r=await fetch(u,{mode:'cors'});if(!r.ok)r=null;}catch(e){r=null;}
-  if(!r){try{r=await fetch(u,{mode:'no-cors'});}catch(e){r=null;}}
-  if(r)await c.put(u,r);else fail++;};
+ const c=await caches.open(OFF);offRun={stop:false};const run=offRun;let done=0,fail=0,ok=0,opq=0,k=0;$('#offGo').disabled=true;$('#offClose').textContent='Parar';
+ const one=async([z,x,y])=>{const u=tUrl(z,x,y);const ex=await c.match(u);if(ex&&ex.type!=='opaque'){ok++;return;}
+  let r=await fetchTile(z,x,y);if(r){await c.put(u,r);ok++;return;}
+  if(ex){opq++;return;}
+  try{r=await fetch(u,{mode:'no-cors'});}catch(e){r=null;}
+  if(r){await c.put(u,r);opq++;}else fail++;};
  const worker=async()=>{while(!run.stop&&k<tiles.length){const t=tiles[k++];try{await one(t);}catch(e){fail++;}done++;
   if(done%10===0||done===tiles.length){$('#offBar').style.width=(done/tiles.length*100)+'%';$('#offEst').textContent=`Descargando… ${done.toLocaleString('es-ES')} de ${tiles.length.toLocaleString('es-ES')}`;}}};
  await Promise.all(Array.from({length:6},worker));
  offRun=null;$('#offClose').textContent='Cerrar';$('#offGo').disabled=false;offCount();
- $('#offEst').textContent=run.stop?`Descarga parada: ${done.toLocaleString('es-ES')} de ${tiles.length.toLocaleString('es-ES')}.`:(fail?`Terminado con ${fail} fotos sin descargar (vuelve a pulsar Descargar para reintentarlas).`:'Descarga completa. Ya puedes usar el mapa sin conexión en esta zona.');};
+ let msg=run.stop?`Descarga parada: ${done.toLocaleString('es-ES')} de ${tiles.length.toLocaleString('es-ES')}.`:(fail?`Terminado con ${fail} fotos sin descargar (pulsa Descargar otra vez para reintentarlas).`:'Descarga completa.');
+ if(ok&&!opq)msg+=' Sirven para el mapa y para el croquis sin conexión.';
+ else if(opq&&!ok)msg+=' ⚠ El servidor no permite usar estas fotos en el croquis: se verán en el mapa, pero para el croquis sin conexión usa «Usar captura del mapa» en la pestaña Informe.';
+ else if(opq)msg+=` ⚠ ${opq} fotos solo sirven para el mapa, no para el croquis.`;
+ $('#offEst').textContent=msg;};
 // croquis con las fotos guardadas
-async function orthoFromCache(ctx,bb,W,H){if(!('caches' in window))return false;const w=bb[2]-bb[0],mpp=w/W,C2=2*Math.PI*R;
+async function orthoFromCache(ctx,bb,W,H){if(!('caches' in window)&&!navigator.onLine)return false;const w=bb[2]-bb[0],mpp=w/W,C2=2*Math.PI*R;const online=navigator.onLine;
  let z=Math.min(19,Math.max(12,Math.ceil(Math.log2(C2/(256*mpp)))));
  for(;z>=14;z--){const T=C2/2**z,x0=Math.floor((bb[0]+C2/2)/T),x1=Math.floor((bb[2]+C2/2)/T),y0=Math.floor((C2/2-bb[3])/T),y1=Math.floor((C2/2-bb[1])/T);
   if((x1-x0+1)*(y1-y0+1)>600)continue;let got=0,tot=0;
-  for(let x=x0;x<=x1;x++)for(let y=y0;y<=y1;y++){tot++;const r=await caches.match(tUrl(z,x,y));if(!r||r.type==='opaque')continue;
+  for(let x=x0;x<=x1;x++)for(let y=y0;y<=y1;y++){tot++;let r=null;try{r=await caches.match(tUrl(z,x,y));}catch(e){}
+   if((!r||r.type==='opaque')&&online)r=await fetchTile(z,x,y);
+   if(!r||r.type==='opaque')continue;
    try{const bm=await createImageBitmap(await r.blob());const X=(x*T-C2/2-bb[0])/w*W,Y=(bb[3]-(C2/2-y*T))/w*W;ctx.drawImage(bm,X,Y,T/w*W+1,T/w*W+1);got++;}catch(e){}}
   if(got>=tot*0.8&&got>0)return true;}
  return false;}
