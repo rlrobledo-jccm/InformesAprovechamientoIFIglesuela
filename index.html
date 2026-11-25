@@ -290,5 +290,45 @@ if(NOMAP){$('#map').innerHTML='<div style="padding:80px 16px;color:#444">El mapa
 if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
 }
 </script>
+<script>
+{ // ===== Dictado por voz en los campos de texto =====
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+if(SR){
+ const st=document.createElement('style');st.textContent=`.dict{position:relative;display:block}.dict>input,.dict>textarea{padding-right:46px!important}
+ .mic{position:absolute;right:4px;top:4px;width:36px;height:36px;border:0;border-radius:50%;background:#e8eee9;color:#1f3d2b;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+ .dict>input+.mic{top:50%;transform:translateY(-50%)}
+ .mic svg{width:18px;height:18px}.mic.on{background:#e0441b;color:#fff;animation:pulse 1.2s infinite}
+ @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(224,68,27,.5)}70%{box-shadow:0 0 0 10px rgba(224,68,27,0)}100%{box-shadow:0 0 0 0 rgba(224,68,27,0)}}
+ @media (prefers-reduced-motion:reduce){.mic.on{animation:none}}`;document.head.appendChild(st);
+ const ICON='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>';
+ const SEL='#v-datos input:not([type]),#v-datos input[type=text],#v-datos textarea,#v-informe input:not([type]),#v-informe textarea,#v-madera label.f input,#v-madera input[data-gp]';
+ let rec=null,btnOn=null;
+ function stop(){if(rec){try{rec.stop();}catch(e){}}}
+ function punt(t,multi){if(!multi)return t;return t.replace(/\s*punto y aparte\s*/gi,'.\n').replace(/\s*punto y seguido\s*/gi,'. ').replace(/\s*nueva línea\s*/gi,'\n').replace(/\s+coma\b/gi,',').replace(/\s+punto\b/gi,'.').replace(/([.\n]\s*)([a-záéíóúñ])/g,(m,a,c)=>a+c.toUpperCase());}
+ function start(el,btn){
+  if(rec){const same=btnOn===btn;stop();if(same)return;}
+  const multi=el.tagName==='TEXTAREA';const num=/decimal|numeric/.test(el.inputMode||'');
+  const base=el.value;const sep=base&&!/\s$/.test(base)?' ':'';
+  rec=new SR();rec.lang='es-ES';rec.interimResults=true;rec.continuous=multi;rec.maxAlternatives=1;
+  let fin='';btnOn=btn;btn.classList.add('on');btn.setAttribute('aria-pressed','true');
+  rec.onresult=e=>{let tmp='';for(let i=e.resultIndex;i<e.results.length;i++){const r=e.results[i];if(r.isFinal)fin+=r[0].transcript;else tmp+=r[0].transcript;}
+   let t=(fin+tmp).trim();if(num){t=t.replace(/\s*coma\s*/gi,',').replace(/(\d)\.(\d)/g,'$1,$2').replace(/[^\d,.\-]/g,'');el.value=t;}
+   else{t=punt(t,multi);if(t&&!base&&!multi)t=t.charAt(0).toUpperCase()+t.slice(1);el.value=num?t:base+(t?sep+t:'');}
+   el.dispatchEvent(new Event('input',{bubbles:true}));};
+  rec.onerror=e=>{const m={'not-allowed':'Permite el uso del micrófono para dictar','service-not-allowed':'El dictado no está disponible en este modo; usa el micrófono del teclado','no-speech':'No se ha oído nada','network':'El dictado necesita conexión a internet'}[e.error];if(m)showMsg(m);};
+  rec.onend=()=>{btn.classList.remove('on');btn.setAttribute('aria-pressed','false');if(rec)rec=null;btnOn=null;};
+  try{rec.start();}catch(e){rec=null;btn.classList.remove('on');}
+ }
+ function showMsg(t){const e=document.getElementById('toast');if(!e)return;e.textContent=t;e.style.display='block';clearTimeout(e._t);e._t=setTimeout(()=>e.style.display='none',2600);}
+ function decorate(){document.querySelectorAll(SEL).forEach(el=>{if(el.dataset.dict)return;el.dataset.dict='1';
+  const w=document.createElement('span');w.className='dict';el.parentNode.insertBefore(w,el);w.appendChild(el);
+  const b=document.createElement('button');b.type='button';b.className='mic';b.innerHTML=ICON;b.setAttribute('aria-label','Dictar');b.setAttribute('aria-pressed','false');
+  b.addEventListener('click',ev=>{ev.preventDefault();ev.stopPropagation();start(el,b);});w.appendChild(b);});}
+ new MutationObserver(decorate).observe(document.querySelector('main'),{childList:true,subtree:true});decorate();
+ document.addEventListener('visibilitychange',()=>{if(document.hidden)stop();});
+}
+}
+</script>
 </body>
+
 </html>

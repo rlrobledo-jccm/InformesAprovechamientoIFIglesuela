@@ -38,6 +38,15 @@ Abre la dirección de la app con cobertura y:
 
 Aparecerá el icono del pino y se abrirá a pantalla completa, como una app.
 
+### Dictado por voz
+
+Cada campo de texto tiene un botón de micrófono. Al pulsarlo se dicta en español; al volver a pulsarlo, o al dejar de hablar, se para.
+
+- **Textos largos** (observaciones): se puede decir «coma», «punto», «punto y seguido», «punto y aparte» o «nueva línea».
+- **Números** (por ejemplo, la distancia entre pies): «cuatro coma cinco» se escribe 4,5.
+- **Permisos y conexión:** la primera vez el móvil pide permiso para el micrófono. El dictado necesita conexión, porque usa el servicio de voz de Google o de Apple.
+- **Si el botón no aparece o no funciona** (pasa en algunos iPhone con la app instalada): usa el micrófono del propio teclado, que funciona en todos los campos.
+
 ### Uso con poca cobertura
 
 - **La primera vez:** abre la app con conexión para que se guarde en el móvil.

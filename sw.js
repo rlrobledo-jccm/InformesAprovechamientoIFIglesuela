@@ -1,6 +1,6 @@
 // Service worker: la app funciona sin conexión una vez abierta con cobertura.
 // Sube el número de versión cada vez que cambies archivos de la app.
-const VERSION = 'v1';
+const VERSION = 'v2';
 const APP = 'aprov-app-' + VERSION;
 const TILES = 'aprov-teselas';
 const MAX_TILES = 3000;
